@@ -1,81 +1,79 @@
-import { Navbar, Container, Nav, Button } from 'react-bootstrap';
+import { Navbar, Container, Nav, Button, Badge } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
 import LogoLacasti from './LogoCasti';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faShoppingCart } from '@fortawesome/free-solid-svg-icons';
+import { faShoppingCart, faUserCircle } from '@fortawesome/free-solid-svg-icons';
+import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 
+// Ícono del carrito con la cantidad de prendas
+function CartLink({ count }) {
+  return (
+    <Nav.Link as={Link} to="/carrito" className="text-white px-2 me-2 position-relative" aria-label={`Carrito (${count})`}>
+      <FontAwesomeIcon icon={faShoppingCart} size="lg" />
+      {count > 0 && (
+        <Badge pill bg="danger" className="position-absolute top-0 start-100 translate-middle" style={{ fontSize: '0.65rem' }}>
+          {count}
+        </Badge>
+      )}
+    </Nav.Link>
+  );
+}
 
 export default function Header() {
   const navigate = useNavigate();
-  const [isAuth, setIsAuth] = useState(localStorage.getItem('auth') === 'true');
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      setIsAuth(localStorage.getItem('auth') === 'true');
-    };
-
-    // Escucha cambios de storage en otras pestañas
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Escucha cambios en la misma pestaña usando un evento personalizado
-    window.addEventListener('authChange', handleStorageChange);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('authChange', handleStorageChange);
-    };
-  }, []);
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { itemCount } = useCart();
 
   const cerrarSesion = () => {
-    localStorage.removeItem('auth');
-    setIsAuth(false);
-    // Dispara evento personalizado para actualizar en la misma pestaña
-    window.dispatchEvent(new Event('authChange'));
+    logout();
     navigate('/');
   };
 
   return (
-    <Navbar bg="primary" variant="dark" expand="lg" className='navbar-glass' sticky="top">
+    <Navbar bg="primary" variant="dark" expand="lg" className="navbar-glass" sticky="top">
       <Container fluid className="px-2 px-md-3">
         <Navbar.Brand as={Link} to="/" className="d-flex align-items-center flex-shrink-0">
           <span className="me-2 d-inline-flex align-items-center">
             <LogoLacasti size={32} />
           </span>
-          <span className="fw-semibold d-none d-sm-inline" style={{fontSize: '0.95rem'}}>LACASTI CLOTHES</span>
+          <span className="fw-semibold d-none d-sm-inline" style={{ fontSize: '0.95rem' }}>LACASTI CLOTHES</span>
         </Navbar.Brand>
 
         <Navbar.Toggle aria-controls="basic-navbar-nav" className="me-2" />
 
         <Navbar.Collapse id="basic-navbar-nav">
-          {/* left group: logo + primary links */}
+          {/* grupo izquierdo: links principales */}
           <Nav className="me-auto align-items-center nav-left">
             <Nav.Link as={Link} to="/" className="px-2">Inicio</Nav.Link>
             <Nav.Link as={Link} to="/productos" className="px-2">Productos</Nav.Link>
+            <Nav.Link as={Link} to="/ofertas" className="px-2">Ofertas</Nav.Link>
+            <Nav.Link as={Link} to="/infaltables" className="px-2">Infaltables</Nav.Link>
 
-            {isAuth && (
-              <>
-                <Nav.Link as={Link} to="/perfil/usuario123" className="px-2 d-none d-md-inline">Perfil</Nav.Link>
-                <Nav.Link as={Link} to="/admin" className="px-2 d-none d-md-inline">Admin</Nav.Link>
-              </>
+            {isAuthenticated && (
+              <Nav.Link as={Link} to="/perfil" className="px-2 d-block d-md-inline">Perfil</Nav.Link>
+            )}
+            {isAdmin && (
+              <Nav.Link as={Link} to="/admin" className="px-2 d-block d-md-inline">Admin</Nav.Link>
             )}
           </Nav>
 
-          {/* right group: login + cart (stay at right) */}
+          {/* grupo derecho: carrito + login/logout */}
           <Nav className="d-flex align-items-center nav-right">
-            {!isAuth ? (
+            <CartLink count={itemCount} />
+            {isAuthenticated ? (
               <>
-                <Nav.Link as={Link} to="/login" className="px-2">Login</Nav.Link>
-                <Nav.Link as={Link} to="/carrito" className='text-white px-2' aria-label="Carrito">                  
-                  <FontAwesomeIcon icon={faShoppingCart} size="lg" />
+                {/* usuario logueado: nombre con link al perfil */}
+                <Nav.Link as={Link} to="/perfil" className="text-white px-2 me-2 d-flex align-items-center" title={user.email}>
+                  <FontAwesomeIcon icon={faUserCircle} size="lg" className="me-2" />
+                  <span className="text-truncate" style={{ maxWidth: '12rem' }}>Hola, {user.name}</span>
                 </Nav.Link>
+                <Button variant="outline-light" onClick={cerrarSesion} size="sm">Cerrar sesión</Button>
               </>
             ) : (
               <>
-                <Nav.Link as={Link} to="/carrito" className='text-white px-2 me-2' aria-label="Carrito">                  
-                  <FontAwesomeIcon icon={faShoppingCart} size="lg" />
-                </Nav.Link>
-                <Button variant="outline-light" onClick={cerrarSesion} size="sm">Cerrar</Button>
+                <Nav.Link as={Link} to="/login" className="px-2">Ingresar</Nav.Link>
+                <Nav.Link as={Link} to="/registro" className="px-2">Crear cuenta</Nav.Link>
               </>
             )}
           </Nav>

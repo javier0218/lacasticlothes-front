@@ -1,13 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import { Carousel, Row, Col, Container } from 'react-bootstrap';
-import ProductCard from '../paginas/ProductCard';
-import { useCartDispatch } from '../context/CartContext';
+import { useEffect, useState } from 'react';
+import { Carousel, Row, Col, Container, Alert } from 'react-bootstrap';
+import ProductCard from './ProductCard';
+import Cargando from './Cargando';
+import { getProducts } from '../services/productService';
+import { isAbortError } from '../services/api';
 
-const FeaturedCarousel = ({ category = null }) => {
+// Trae los destacados; si no hay ninguno, muestra los más nuevos
+async function fetchCarouselProducts(signal) {
+  const featured = await getProducts({ featured: 'true', limit: 12 }, signal);
+  if (featured.data.length > 0) return featured.data;
+  const newest = await getProducts({ sort: 'newest', limit: 12 }, signal);
+  return newest.data;
+}
+
+const FeaturedCarousel = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [perPage, setPerPage] = useState(3);
-  const dispatch = useCartDispatch();
 
   // Ajustar número de items por slide según ancho de ventana
   useEffect(() => {
@@ -23,23 +33,23 @@ const FeaturedCarousel = ({ category = null }) => {
   }, []);
 
   useEffect(() => {
-    let url = 'https://69092b0b2d902d0651b2dfae.mockapi.io/productos?limit=12';
-    if (category) url = `https://69092b0b2d902d0651b2dfae.mockapi.io/productos/category/${category}`;
-
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
+    const controller = new AbortController();
+    fetchCarouselProducts(controller.signal)
+      .then((data) => {
         setProducts(data);
         setLoading(false);
       })
-      .catch(err => {
-        console.error('Error fetching featured products:', err);
+      .catch((err) => {
+        if (isAbortError(err)) return;
+        setError(err.message);
         setLoading(false);
       });
-  }, [category]);
+    return () => controller.abort();
+  }, []);
 
-  if (loading) return <div>Cargando destacados...</div>;
-  if (!products || products.length === 0) return <div>No hay productos destacados</div>;
+  if (loading) return <Cargando texto="Cargando destacados..." />;
+  if (error) return <Alert variant="danger">No pudimos cargar los destacados: {error}</Alert>;
+  if (products.length === 0) return <p>Todavía no hay productos publicados.</p>;
 
   // Agrupar productos según perPage
   const slides = [];
@@ -71,8 +81,8 @@ const FeaturedCarousel = ({ category = null }) => {
           <Carousel.Item key={idx}>
             <Row className="gx-3">
               {group.map(product => (
-                <Col key={product.id} sm={12} md={Math.floor(12 / perPage)} className="mb-3">
-                  <ProductCard product={product} agregarAlCarrito={() => dispatch({ type: 'ADD_ITEM', payload: product })} />
+                <Col key={product.id} xs={Math.floor(12 / perPage)} className="mb-3">
+                  <ProductCard product={product} />
                 </Col>
               ))}
             </Row>

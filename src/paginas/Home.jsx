@@ -1,5 +1,3 @@
-import React from 'react';
-import ProductList from './ProductList';
 import FeaturedCarousel from '../components/FeaturedCarousel';
 import hero from '../assets/hero.svg';
 import quality from '../assets/quality.svg';
@@ -7,10 +5,10 @@ import secondhand from '../assets/secondhand.svg';
 
 const Home = () => {
     return (
-        <main>
+        <div>
             <section className="hero" style={{background: 'linear-gradient(90deg, #fff, #f8fbff)'}}>
-                <div style={{maxWidth: 1100, margin: '0 auto', padding: '3rem 1rem', display: 'flex', alignItems: 'center'}}>
-                <div style={{flex: 1, paddingRight: '2rem'}}>
+                <div className="hero-inner" style={{maxWidth: 1100, margin: '0 auto', padding: '3rem 1rem'}}>
+                <div className="hero-left">
                     <h1 style={{fontSize: '2.25rem', marginBottom: '0.5rem'}}>LaCasti Clothes</h1>
                     <p style={{fontSize: '1.05rem', color: '#333', lineHeight: 1.5}}>
                         Somos LaCasti Clothes: una tienda dedicada a la moda circular. Ofrecemos ropa de segunda mano seleccionada
@@ -23,14 +21,14 @@ const Home = () => {
                         <li>Envíos rápidos y embalaje reciclable</li>
                     </ul>
                 </div>
-                <div style={{flex: 1, textAlign: 'center', paddingLeft: '1rem'}}>
-                    <img src={hero} alt="LaCastiClothes hero" style={{maxWidth: '100%', height: 'auto', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.08)'}} />
+                <div className="hero-right" style={{textAlign: 'center'}}>
+                    <img src={hero} alt="LaCasti Clothes, ropa de segunda mano" style={{maxWidth: '100%', height: 'auto', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.08)'}} />
                 </div>
                 </div>
             </section>
 
             <section className="features" style={{padding: '2rem 1rem'}}>
-                <div style={{maxWidth: 1100, margin: '0 auto', display: 'flex', gap: '1rem', justifyContent: 'center'}}>
+                <div style={{maxWidth: 1100, margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'center'}}>
                 <article style={{flex: '0 1 300px', background: '#fff', padding: '1.2rem', borderRadius: '10px', boxShadow: '0 6px 18px rgba(0,0,0,0.04)'}}>
                     <img src={quality} alt="Calidad" style={{width: 72, height: 72}} />
                     <h3 style={{marginTop: '0.6rem'}}>Calidad garantizada</h3>
@@ -61,7 +59,7 @@ const Home = () => {
                     <FeaturedCarousel />
                 </div>
             </section>
-        </main>
+        </div>
     );
 }
 

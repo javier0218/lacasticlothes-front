@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function LogoLacasti({ size = 40 }) {
   return (
     <svg

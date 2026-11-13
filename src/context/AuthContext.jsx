@@ -1,42 +1,81 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { clearToken, getToken, saveToken, setUnauthorizedHandler } from '../services/api';
+import { getMe, loginRequest, registerRequest } from '../services/authService';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
+
 export const AuthProvider = ({ children }) => {
-    const [token, setToken] = useState(() => {
-        return localStorage.getItem('token') || null;
-    });
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(() => getToken());
+  // Si hay un token guardado, arrancamos "cargando" hasta validarlo con /auth/me
+  const [loading, setLoading] = useState(() => Boolean(getToken()));
 
-    const login = (username, password) => {
-        // Aquí iría la lógica real de autenticación, por ahora es un mock
-        if (username === 'roma' && password === '1234') {
-            const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.KMUFsIDTnFmyG3nMiGM6H9FNFUROf3wh7SmqJp-QV30';
-            setToken(token);
-            localStorage.setItem('token', token); // Guardar el token en localStorage
-            // Marcar como autenticado para componentes que usan localStorage (Header, etc.)
-            localStorage.setItem('auth', 'true');
-            // Disparar evento para notificar cambios de auth en la misma pestaña
-            window.dispatchEvent(new Event('authChange'));
-            return true;
-        }
-        return false;
-    };
+  const logout = useCallback(() => {
+    clearToken();
+    setToken(null);
+    setUser(null);
+  }, []);
 
-    const logout = () => {
-        setToken(null);
-        localStorage.removeItem('token'); // Eliminar el token de localStorage
-        localStorage.removeItem('auth');
-        window.dispatchEvent(new Event('authChange'));
-    };
+  // Si el servidor responde 401 (token vencido), cerramos la sesión
+  useEffect(() => {
+    setUnauthorizedHandler(logout);
+    return () => setUnauthorizedHandler(null);
+  }, [logout]);
 
-    return (
-        <AuthContext.Provider value={{ token, login, logout }}>
-            {children}
-        </AuthContext.Provider>
-    );
+  // Al abrir la página: validar el token guardado y traer los datos del usuario
+  useEffect(() => {
+    if (!getToken()) return;
+    const controller = new AbortController();
+
+    getMe(controller.signal)
+      .then((data) => setUser(data.user))
+      .catch((err) => {
+        // Solo borramos el token si el servidor dice que no sirve (401).
+        // Si el servidor no responde, lo dejamos para reintentar en la próxima visita.
+        if (err.status === 401) logout();
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [logout]);
+
+  // Guarda la sesión que devuelven /auth/login y /auth/register
+  const startSession = (data) => {
+    saveToken(data.token);
+    setToken(data.token);
+    setUser(data.user);
+    return data.user;
+  };
+
+  const login = async (email, password) => {
+    const data = await loginRequest(email, password);
+    return startSession(data);
+  };
+
+  const register = async (name, email, password) => {
+    const data = await registerRequest(name, email, password);
+    return startSession(data);
+  };
+
+  const value = {
+    user,
+    token,
+    isAuthenticated: Boolean(user),
+    isAdmin: user?.role === 'ADMIN',
+    loading,
+    login,
+    register,
+    logout,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
-    return useContext(AuthContext);
-}
-
-
-
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth debe usarse dentro de AuthProvider');
+  return ctx;
+};
